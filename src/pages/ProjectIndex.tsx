@@ -7,7 +7,7 @@ import { ExpandMore as ExpandMoreIcon, CloudUpload as CloudUploadIcon } from '@m
 
 const ProjectIndex: React.FC = () => {
   return (
-    <Box sx={{ flexGrow: 1, backgroundColor: '#f4f4f4', minHeight: '100vh', padding: 2 }}>
+    <Box sx={{ flexGrow: 1, backgroundColor: '#b4f4f4', minHeight: '100vh', padding: 2 }}>
       <Container maxWidth={false} sx={{ padding: 0 }}>
         <Grid container spacing={2}>
           {/* Accordion Sidebar */}
