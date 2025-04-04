@@ -5,398 +5,1059 @@ import {
     Badge, Box, 
     Grid,
     Container,
-    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
-    FormControlLabel,
+    TextField,
+    Alert,
+    Card,
+    CardContent,
+    IconButton,
+    Divider,
+    FormControl,
+    InputLabel,
+    Select,
     MenuItem,
-    TextField
+    Chip,
+    CircularProgress
 } from '@mui/material';
-import { AddCircle as AddCircleIcon } from '@mui/icons-material';
+import { Add as AddIcon, PersonAdd as PersonAddIcon, Image as ImageIcon, Description as DescriptionIcon, MoreVert as MoreVertIcon, Share as ShareIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
-import project1 from "../assests/projects/limebit.png";
-import project2 from "../assests/projects/victorymetals.png";
-import axios from 'axios';
+import { supabase } from '../utils/supabaseClient';
+import ResponsiveProjectFlow from '../components/ResponsiveProjectFlow';
+import FullPageLoader from '../components/FullPageLoader';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Project {
-    _id: string;
+    id: string;
     name: string;
     description: string;
-    logo: string;
-    status: string;
-    workers: Worker[];
-    folders: Folder[];
-    files: File[];
+    image_url: string;
+    created_at: string;
+    organization_id?: string;
 }
 
-interface Folder {
-    _id: string;
-    name: string;
-    project: string;
-    files: string[];
-} 
-
-interface Worker {
-    _id: string;
-    name: string;
-    avatar: string;
-    status: string;
+interface TeamMember {
+    id: string;
+    full_name: string;
+    email: string;
+    avatar_url: string | null;
+    role: string;
 }
 
-interface LogItem {
-    title: string;
+interface Activity {
+    id: string;
     description: string;
-    avatar: string;
+    created_at: string;
+    user_name: string;
 }
 
-// Dummy Data
+// Update the dummy projects array with more projects
 const dummyProjects: Project[] = [
     {
-        _id: '1',
-        name: 'Dummy Project 1',
-        description: 'This is a fallback project description.',
-        logo: project1, // Use the imported image directly
-        status: 'Started',
-        workers: [],
-        folders: [],
-        files: [],
+        id: '123e4567-e89b-12d3-a456-426614174000',
+        name: 'Safety Management System',
+        description: 'Comprehensive safety protocols and guidelines for construction sites.',
+        image_url: '/src/assets/projects/victorymetals.png',
+        created_at: new Date().toISOString()
     },
     {
-        _id: '2',
-        name: 'Dummy Project 2',
-        description: 'This is another fallback project description.',
-        logo: project2, // Use the imported image directly
-        status: 'In Progress',
-        workers: [],
-        folders: [],
-        files: [],
+        id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'Risk Assessment Framework',
+        description: 'Standardized approach to identifying and mitigating workplace hazards.',
+        image_url: '/src/assets/projects/newfound.png',
+        created_at: new Date().toISOString()
     },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        name: 'Emergency Response Plan',
+        description: 'Detailed procedures for handling workplace emergencies and incidents.',
+        image_url: '/src/assets/projects/victorymetals.png',
+        created_at: new Date().toISOString()
+    },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174003',
+        name: 'Training Documentation',
+        description: 'Employee safety training records and certification tracking system.',
+        image_url: '/src/assets/projects/reguhub_bg.jpg',
+        created_at: new Date().toISOString()
+    },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174004',
+        name: 'Equipment Inspection',
+        description: 'Regular safety inspections and maintenance records for equipment.',
+        image_url: '/src/assets/projects/limebit.png',
+        created_at: new Date().toISOString()
+    },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174005',
+        name: 'Incident Reporting',
+        description: 'System for reporting and investigating workplace incidents.',
+        image_url: '/src/assets/projects/newfound.png',
+        created_at: new Date().toISOString()
+    },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174006',
+        name: 'PPE Management',
+        description: 'Personal Protective Equipment inventory and distribution system.',
+        image_url: '/src/assets/projects/victorymetals.png',
+        created_at: new Date().toISOString()
+    },
+    {
+        id: '123e4567-e89b-12d3-a456-426614174007',
+        name: 'Safety Metrics Dashboard',
+        description: 'Real-time monitoring of key safety performance indicators.',
+        image_url: '/src/assets/projects/reguhub_bg.jpg',
+        created_at: new Date().toISOString()
+    }
 ];
 
-const dummyWorkers: Worker[] = [
+const dummyTeamMembers: TeamMember[] = [
     {
-        _id: '1',
-        name: 'Dummy Worker 1',
-        avatar: 'https://www.w3schools.com/howto/img_avatar.png',
-        status: 'active',
+        id: '1',
+        full_name: 'Dummy Worker 1',
+        email: 'worker1@example.com',
+        avatar_url: 'https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png',
+        role: 'Admin'
     },
     {
-        _id: '2',
-        name: 'Dummy Worker 2',
-        avatar: 'https://www.w3schools.com/w3images/avatar4.png',
-        status: 'inactive',
-    },
+        id: '2',
+        full_name: 'Dummy Worker 2',
+        email: 'worker2@example.com',
+        avatar_url: 'https://primefaces.org/cdn/primeng/images/demo/avatar/ionibowcher.png',
+        role: 'Worker'
+    }
 ];
 
-const dummyLogItems: LogItem[] = [
+const dummyActivities: Activity[] = [
     {
-        title: 'Dummy Log 1',
-        description: 'This is a fallback log description.',
-        avatar: 'https://www.w3schools.com/w3images/avatar1.png',
+        id: '1',
+        description: 'Dummy Log 1',
+        created_at: new Date().toISOString(),
+        user_name: 'https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png'
     },
     {
-        title: 'Dummy Log 2',
-        description: 'This is another fallback log description.',
-        avatar: 'https://www.w3schools.com/w3images/avatar3.png',
-    },
+        id: '2',
+        description: 'Dummy Log 2',
+        created_at: new Date().toISOString(),
+        user_name: 'https://primefaces.org/cdn/primeng/images/demo/avatar/ionibowcher.png'
+    }
 ];
 
 const Dashboard: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
-    const [workers, setWorkers] = useState<Worker[]>([]);
-    const [logItems, setLogItems] = useState<LogItem[]>([]);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [activities, setActivities] = useState<Activity[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    
+    // Dialog states
+    const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviting, setInviting] = useState(false);
+    const [inviteError, setInviteError] = useState('');
 
-    useEffect(() => {
-        const fetchProjects = async () => {
-            try {
-                const response = await axios.get<Project[]>('https://your-backend-url/projects');
-                if (response.data.length > 0) {
-                    setProjects(response.data);
-                } else {
-                    setProjects(dummyProjects); // Use dummy data if no data returned
-                }
-            } catch (error) {
-                console.error('Error fetching projects:', error);
-                setProjects(dummyProjects); // Use dummy data if there’s an error
-            }
-        };
+    const [openProjectDialog, setOpenProjectDialog] = useState(false);
+    const [projectFormData, setProjectFormData] = useState({
+        name: '',
+        description: '',
+        status: 'planning',
+        imageFile: null as File | null,
+    });
+    const [projectLoading, setProjectLoading] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
 
-        const fetchWorkers = async () => {
-            try {
-                const response = await axios.get<Worker[]>('https://your-backend-url/workers');
-                if (response.data.length > 0) {
-                    setWorkers(response.data);
-                } else {
-                    setWorkers(dummyWorkers); // Use dummy data if no data returned
-                }
-            } catch (error) {
-                console.error('Error fetching workers:', error);
-                setWorkers(dummyWorkers); // Use dummy data if there’s an error
-            }
-        };
-
-        const fetchLogItems = async () => {
-            try {
-                const response = await axios.get<LogItem[]>('https://your-backend-url/logItems');
-                if (response.data.length > 0) {
-                    setLogItems(response.data);
-                } else {
-                    setLogItems(dummyLogItems); // Use dummy data if no data returned
-                }
-            } catch (error) {
-                console.error('Error fetching log items:', error);
-                setLogItems(dummyLogItems); // Use dummy data if there’s an error
-            }
-        };
-
-        fetchProjects();
-        fetchWorkers();
-        fetchLogItems();
-    }, []);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [editError, setEditError] = useState<string | null>(null);
 
     const navigate = useNavigate();
 
-    const handleNavigateToProjectIndex = () => {
-        navigate('/projects');
+    // Add this dummy project
+    const dummyProject: Project = {
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        name: 'Construction Site A',
+        description: 'Major construction project in downtown area',
+        image_url: '',
+        created_at: new Date().toISOString()
     };
 
-    const [open, setOpen] = useState(false);
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
 
-    const handleClickOpen = () => {
-        setOpen(true);
+    useEffect(() => {
+        if (projects.length === 0 && !loading) {
+            setProjects([dummyProject]);
+        }
+    }, [loading]);
+
+    useEffect(() => {
+        if (!loading) {
+            // Set dummy data if no real data is available
+            if (projects.length === 0) {
+                setProjects(dummyProjects);
+            }
+            if (teamMembers.length === 0) {
+                setTeamMembers(dummyTeamMembers);
+            }
+            if (activities.length === 0) {
+                setActivities(dummyActivities);
+            }
+        }
+    }, [loading]);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No user found');
+
+            // Get user's organization
+            const { data: orgMember } = await supabase
+                .from('organization_members')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (orgMember) {
+                // Fetch projects
+                const { data: projectsData } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('organization_id', orgMember.organization_id)
+                    .order('created_at', { ascending: false });
+
+                // Fetch team members
+                const { data: teamData } = await supabase
+                    .from('organization_members')
+                    .select(`
+                        id,
+                        profiles (
+                            full_name,
+                            email,
+                            avatar_url
+                        ),
+                        role
+                    `)
+                    .eq('organization_id', orgMember.organization_id);
+
+                // Fetch recent activities
+                const { data: activitiesData } = await supabase
+                    .from('activities')
+                    .select(`
+                        id,
+                        description,
+                        created_at,
+                        profiles (full_name)
+                    `)
+                    .eq('organization_id', orgMember.organization_id)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                setProjects(projectsData || []);
+                
+                // Map team data to TeamMember type
+                const mappedTeamData = (teamData || []).map(member => ({
+                    id: member.id,
+                    full_name: member.profiles[0]?.full_name || '',
+                    email: member.profiles[0]?.email || '',
+                    avatar_url: member.profiles[0]?.avatar_url,
+                    role: member.role
+                }));
+                setTeamMembers(mappedTeamData);
+
+                // Map activities data to Activity type
+                const mappedActivitiesData = (activitiesData || []).map(activity => ({
+                    id: activity.id,
+                    description: activity.description,
+                    created_at: activity.created_at,
+                    user_name: activity.profiles[0]?.full_name || ''
+                }));
+                setActivities(mappedActivitiesData);
+            }
+        } catch (error: any) {
+            console.error('Error fetching dashboard data:', error);
+            setError(error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleClose = () => {
-        setOpen(false);
+    const handleInviteMember = async () => {
+        try {
+            setInviting(true);
+            setInviteError('');
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No user found');
+
+            // Get organization ID
+            const { data: orgMember } = await supabase
+                .from('organization_members')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (!orgMember) throw new Error('No organization found');
+
+            // Create invitation
+            const { error: inviteError } = await supabase
+                .from('worker_invitations')
+                .insert([
+                    {
+                        organization_id: orgMember.organization_id,
+                        email: inviteEmail,
+                        status: 'pending'
+                    }
+                ]);
+
+            if (inviteError) throw inviteError;
+
+            // Close dialog and refresh data
+            setInviteDialogOpen(false);
+            setInviteEmail('');
+            fetchDashboardData();
+        } catch (error: any) {
+            console.error('Error inviting member:', error);
+            setInviteError(error.message);
+        } finally {
+            setInviting(false);
+        }
     };
+
+    const handleProjectDialogOpen = () => {
+        setOpenProjectDialog(true);
+    };
+
+    const handleProjectDialogClose = () => {
+        setOpenProjectDialog(false);
+        setProjectFormData({
+            name: '',
+            description: '',
+            status: 'planning',
+            imageFile: null,
+        });
+        setProjectError(null);
+    };
+
+    const handleProjectInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setProjectFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleProjectStatusChange = (e: any) => {
+        setProjectFormData(prev => ({ ...prev, status: e.target.value }));
+    };
+
+    const handleProjectFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                setProjectError('File size must be less than 5MB');
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                setProjectError('File must be an image');
+                return;
+            }
+            setProjectFormData(prev => ({ ...prev, imageFile: file }));
+            setProjectError(null);
+        }
+    };
+
+    const handleCreateProject = async () => {
+        setProjectLoading(true);
+        setProjectError(null);
+
+        try {
+            const user = await supabase.auth.getUser();
+            if (!user.data.user) {
+                throw new Error('No user found');
+            }
+
+            let imageUrl = null;
+            if (projectFormData.imageFile) {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', projectFormData.imageFile);
+
+                const response = await fetch('http://localhost:3001/api/upload', {
+                    method: 'POST',
+                    body: uploadFormData,
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to upload image');
+                }
+
+                const data = await response.json();
+                imageUrl = data.url;
+            }
+
+            const { data: project, error: projectError } = await supabase
+                .from('projects')
+                .insert([
+                    {
+                        name: projectFormData.name,
+                        description: projectFormData.description,
+                        status: projectFormData.status,
+                        image_url: imageUrl,
+                        created_by: user.data.user.id,
+                    },
+                ])
+                .select()
+                .single();
+
+            if (projectError) throw projectError;
+
+            // Log activity
+            const { error: activityError } = await supabase
+                .from('activities')
+                .insert([
+                    {
+                        project_id: project.id,
+                        user_id: user.data.user.id,
+                        action: 'created',
+                        details: `Created project: ${projectFormData.name}`,
+                    },
+                ]);
+
+            if (activityError) throw activityError;
+
+            // Update projects list
+            setProjects(prev => [...prev, project]);
+            handleProjectDialogClose();
+        } catch (err: any) {
+            setProjectError(err.message);
+        } finally {
+            setProjectLoading(false);
+        }
+    };
+
+    const handleEditProject = async () => {
+        if (!selectedProject) return;
+        
+        try {
+            setEditError(null);
+            
+            // Get current user
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError) throw userError;
+            if (!user) throw new Error('No user found');
+
+            // Get user's organization
+            const { data: orgMember, error: orgError } = await supabase
+                .from('organization_members')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (orgError) {
+                console.error('Error fetching organization:', orgError);
+                throw new Error('Failed to verify organization membership');
+            }
+
+            if (!orgMember) {
+                throw new Error('You are not a member of any organization');
+            }
+
+            // First verify the project exists and belongs to the organization
+            const { data: projectData, error: projectError } = await supabase
+                .from('projects')
+                .select('*')
+                .eq('organization_id', orgMember.organization_id)
+                .eq('id', selectedProject.id)
+                .single();
+
+            if (projectError || !projectData) {
+                console.error('Error fetching project:', projectError);
+                throw new Error('Project not found or you do not have access to it');
+            }
+
+            // Update the project
+            const { error: updateError } = await supabase
+                .from('projects')
+                .update({
+                    name: selectedProject.name,
+                    description: selectedProject.description,
+                    image_url: selectedProject.image_url,
+                    updated_at: new Date().toISOString(),
+                    updated_by: user.id
+                })
+                .eq('id', selectedProject.id)
+                .eq('organization_id', orgMember.organization_id);
+
+            if (updateError) {
+                console.error('Error updating project:', updateError);
+                throw new Error('Failed to update project');
+            }
+
+            // Log activity
+            try {
+                await supabase
+                    .from('activities')
+                    .insert([
+                        {
+                            project_id: selectedProject.id,
+                            user_id: user.id,
+                            organization_id: orgMember.organization_id,
+                            description: `Updated project: ${selectedProject.name}`,
+                            action: 'updated'
+                        }
+                    ]);
+            } catch (activityError) {
+                console.error('Error logging activity:', activityError);
+            }
+
+            // Update local state and refresh data
+            await fetchDashboardData();
+            
+            setEditDialogOpen(false);
+            setSelectedProject(null);
+            setEditError(null);
+        } catch (error: any) {
+            console.error('Error updating project:', error);
+            setEditError(error.message);
+        }
+    };
+
+    // Add animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+                ease: "easeOut"
+            }
+        }
+    };
+
+    const listItemVariants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: {
+            opacity: 1,
+            x: 0,
+            transition: {
+                duration: 0.3,
+                ease: "easeOut"
+            }
+        }
+    };
+
+    // Add this new component for image handling
+    const ProjectImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+        const [error, setError] = useState(false);
+        const [loading, setLoading] = useState(true);
+
+        return (
+            <Box
+                sx={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '160px',
+                    bgcolor: 'background.default',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    overflow: 'hidden',
+                    borderRadius: 1
+                }}
+            >
+                {loading && !error && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            bgcolor: 'background.default'
+                        }}
+                    >
+                        <CircularProgress size={24} />
+                    </Box>
+                )}
+                {error ? (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 1
+                        }}
+                    >
+                        <ImageIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+                        <Typography variant="caption" color="text.secondary">
+                            Image not found
+                        </Typography>
+                    </Box>
+                ) : (
+                    <Box
+                        component="img"
+                        src={src}
+                        alt={alt}
+                        onError={() => setError(true)}
+                        onLoad={() => setLoading(false)}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                            ':hover': {
+                                transform: 'scale(1.05)'
+                            }
+                        }}
+                    />
+                )}
+            </Box>
+        );
+    };
+
+    if (loading) {
+        return <FullPageLoader />;
+    }
 
     return (
-        <Box sx={{ flexGrow: 1, backgroundColor: '#f4f4f4', padding: 0}}>
-            <Container maxWidth={false} disableGutters={true}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12} lg={9} spacing={4} sx={{paddingTop: 0}}>
-                        {/* Organization Projects */}
-                        <Grid item xs={12} lg={12}>
-                            <Paper elevation={3} sx={{ padding: 2, height: '100%' }}>
-                                <Grid container xs={12}>
-                                    <Grid item xs={10} sm={8} md={9}>
-                                        <Typography variant="h6" gutterBottom>
-                                            Organization Projects
-                                        </Typography>
-                                    </Grid>
-                                    <Grid item xs={2} sm={4} md={3} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button variant="contained" color="primary" sx={{ marginLeft: 2 }} onClick={handleClickOpen}>
-                                            Create Project
+        <Box sx={{ 
+            p: 0,
+            bgcolor: '#F4F4F4',
+            minHeight: '100vh'
+        }}>
+            <Grid container spacing={3}>
+                {/* Left Column - 75% */}
+                <Grid item xs={12} lg={9}>
+                    {/* First Row - Organization Projects */}
+                    <Paper elevation={1} sx={{ 
+                        p: 3, 
+                        border: '1px solid #e0e0e0',
+                        borderRadius: 0,
+                        mb: 3,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: 'calc(100vh - 34%)', 
+                    }}>
+                        <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            mb: 3,
+                            flexShrink: 0
+                        }}>
+                            <Typography variant="h6">Organization Projects</Typography>
+                            <Button
+                                variant="contained"
+                                startIcon={<AddIcon />}
+                                onClick={handleProjectDialogOpen}
+                                sx={{ borderRadius: 0 }}
+                            >
+                                Add Project
                                         </Button>
-                                    </Grid>
-                                </Grid>
-                                <Grid container spacing={2} sx={{ minHeight: '300px' }}>
+                        </Box>
+                        <Box sx={{ 
+                            overflow: 'auto',
+                            flex: 1,
+                            margin: '-8px'
+                        }}>
+                            <motion.div
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="visible"
+                            >
+                                <Grid container spacing={2} overflow="auto">
                                     {projects.map((project) => (
-                                        <Grid item xs={12} sm={6} md={3} key={project._id} onClick={handleNavigateToProjectIndex}>
-                                            <Paper elevation={3} sx={{ padding: 2, textAlign: 'center' }}>
-                                                <img 
-                                                    alt={project.name} 
-                                                    src={project.logo}
-                                                    style={{ margin: 'auto', width: 100, height: 100, objectFit: 'contain' }} 
-                                                />
-                                                <Typography variant="h6" sx={{ marginTop: 2 }}>
+                                        <Grid item xs={12} sm={6} md={4} lg={3} rowSpacing={0.5} key={project.id}>
+                                            <motion.div variants={itemVariants}>
+                                                <Paper elevation={1} sx={{ 
+                                                    p: 2,
+                                                    border: '1px solid #e0e0e0',
+                                                    borderRadius: 0,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    position: 'relative'
+                                                }}>
+                                                    <IconButton 
+                                                        size="small"
+                                                        sx={{ 
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            right: 8,
+                                                        }}
+                                                        onClick={() => {
+                                                            setSelectedProject(project);
+                                                            setEditDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    <Box sx={{ mb: 2 }}>
+                                                        <ProjectImage src={project.image_url} alt={project.name} />
+                                                    </Box>
+                                                    <Typography variant="h6" gutterBottom noWrap>
                                                     {project.name}
                                                 </Typography>
-                                                <Typography variant="body2" color="textSecondary" sx={{ marginBottom: 2 }}>
+                                                    <Typography 
+                                                        variant="body2" 
+                                                        color="text.secondary" 
+                                                        sx={{ 
+                                                            mb: 2,
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical'
+                                                        }}
+                                                    >
                                                     {project.description}
                                                 </Typography>
-                                                <Button size="small" sx={{ marginRight: 1 }}>Share</Button>
-                                                <Button size="small">Learn More</Button>
+                                                    <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
+                                                        <Button 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                textTransform: 'none',
+                                                                borderRadius: 0
+                                                            }}
+                                                            onClick={() => navigate(`/safetyindex/${project.id}`)}
+                                                        >
+                                                            View Details
+                                                        </Button>
+                                                    </Box>
                                             </Paper>
+                                            </motion.div>
                                         </Grid>
                                     ))}
                                 </Grid>
-
+                            </motion.div>
+                        </Box>
                             </Paper>
-                        </Grid>
 
-                        <Grid container xs={12} spacing={2} sx={{ paddingTop: 2 }}>
-                            <Grid item xs={12} sm={12} md={4}>
-                                {/* Organization Workers */}
-                                <Grid item xs={12} lg={12} sx={{ height: '100%' }}>
-                                    <Paper elevation={3} sx={{ padding: 2, height: '100%' }}>
+                    {/* Second Row - Workers and Flow */}
+                    <Grid container spacing={3}>
+                        {/* Organization Workers - 33% */}
+                        <Grid item xs={12} md={4}>
+                            <Paper elevation={1} sx={{ 
+                                p: 3, 
+                                border: '1px solid #e0e0e0', 
+                                borderRadius: 0,
+                                height: 'calc(100vh - 85%)',
+                                overflow: 'auto'
+                            }}>
                                         <Typography variant="h6" gutterBottom>
                                             Organization Workers
                                         </Typography>
-                                        <List>
-                                            {workers.map((worker) => (
-                                                <ListItem key={worker._id}>
+                                <List sx={{ pt: 0 }}>
+                                    <AnimatePresence>
+                                        {teamMembers.map((member) => (
+                                            <motion.div
+                                                key={member.id}
+                                                variants={listItemVariants}
+                                                initial="hidden"
+                                                animate="visible"
+                                                exit="hidden"
+                                            >
+                                                <ListItem 
+                                                    disableGutters
+                                                    secondaryAction={
+                                                        <IconButton edge="end" size="small">
+                                                            <AddIcon fontSize="small" />
+                                                        </IconButton>
+                                                    }
+                                                >
                                                     <ListItemAvatar>
-                                                        <Avatar alt={worker.name} src={worker.avatar} />
+                                                        <Avatar src={member.avatar_url || undefined} />
                                                     </ListItemAvatar>
-                                                    <ListItemText primary={worker.name} />
-                                                    <Badge color="success" variant="dot">
-                                                        <AddCircleIcon />
-                                                    </Badge>
+                                                    <ListItemText 
+                                                        primary={member.full_name}
+                                                        primaryTypographyProps={{
+                                                            variant: 'body2'
+                                                        }}
+                                                    />
                                                 </ListItem>
+                                            </motion.div>
                                             ))}
+                                    </AnimatePresence>
                                         </List>
                                     </Paper>
-                                </Grid>
                             </Grid>
 
-                            <Grid item xs={12} sm={12} md={8}>
-                                {/* Project Flow */}
-                                <Grid item xs={12} lg={12} sx={{ height: '100%' }}>
-                                    <Paper elevation={3} sx={{ padding: 2, height: '100%' }}>
+                        {/* Project Flow - 67% */}
+                        <Grid item xs={12} md={8}>
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <Paper elevation={1} sx={{ 
+                                    p: 3, 
+                                    border: '1px solid #e0e0e0', 
+                                    borderRadius: 0,
+                                    height: 'calc(100vh - 85%)',
+                                    overflow: 'auto'
+                                }}>
                                         <Typography variant="h6" gutterBottom>
                                             Project Flow
                                         </Typography>
-                                        <TableContainer>
-                                            <Table>
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Project</TableCell>
-                                                        <TableCell>Folders</TableCell>
-                                                        <TableCell>Files</TableCell>
-                                                        <TableCell>Status</TableCell>
-                                                        <TableCell>Workers</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {projects.map((project) => (
-                                                        <TableRow key={project._id}>
-                                                            <TableCell>{project.name}</TableCell>
-                                                            <TableCell>{project.folders.length}</TableCell>
-                                                            <TableCell>{project.files.length}</TableCell>
-                                                            <TableCell>
-                                                                <Button size="small" variant="contained" color={
-                                                                    project.status === 'Completed' ? 'success' : project.status === 'In Progress' ? 'warning' : 'primary'
-                                                                }>
-                                                                    {project.status}
-                                                                </Button>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Box sx={{ display: 'flex' }}>
-                                                                    {project.workers.map((worker, idx) => (
-                                                                        <Avatar key={idx} alt={worker.name} src={worker.avatar} sx={{ marginRight: '-8px', border: '2px solid white' }} />
-                                                                    ))}
-                                                                </Box>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </TableContainer>
+                                    <ResponsiveProjectFlow
+                                        data={projects.map((project, index) => ({
+                                            project: project.name,
+                                            folders: 0,
+                                            files: 0,
+                                            status: index === 0 ? 'STARTED' : 'IN PROGRESS',
+                                            workers: teamMembers.length
+                                        }))}
+                                    />
                                     </Paper>
-                                </Grid>
+                            </motion.div>
                             </Grid>
                         </Grid>
                     </Grid>
 
-                    <Grid item xs={12} lg={3}>
-                        {/* Project Log */}
-                        <Grid item xs={12} lg={12} sx={{ height: '100%' }}>
-                            <Paper elevation={3} sx={{ padding: 2, height: '100%' }}>
+                {/* Right Column - Project Log 25% */}
+                <Grid item xs={12} lg={3} >
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <Paper elevation={1} sx={{ 
+                            p: 3, 
+                            border: '1px solid #e0e0e0', 
+                            borderRadius: 0,
+                            height: 'calc(100vh - 11%)',
+                            overflow: 'auto'
+                        }}>
                                 <Typography variant="h6" gutterBottom>
                                     Project Log
                                 </Typography>
-                                <List>
-                                    {logItems.map((log, index) => (
-                                        <ListItem alignItems="flex-start" key={index}>
+                            <List sx={{ pt: 0 }}>
+                                <AnimatePresence>
+                                    {activities.map((activity) => (
+                                        <motion.div
+                                            key={activity.id}
+                                            variants={listItemVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            exit="hidden"
+                                        >
+                                            <ListItem 
+                                                disableGutters
+                                            >
                                             <ListItemAvatar>
-                                                <Avatar alt={log.title} src={log.avatar} />
+                                                    <Avatar src={activity.user_name} />
                                             </ListItemAvatar>
                                             <ListItemText
-                                                primary={log.title}
-                                                secondary={log.description}
+                                                    primary={activity.description}
+                                                    secondary={new Date(activity.created_at).toLocaleDateString()}
+                                                    primaryTypographyProps={{
+                                                        variant: 'body2'
+                                                    }}
+                                                    secondaryTypographyProps={{
+                                                        variant: 'caption'
+                                                    }}
                                             />
                                         </ListItem>
+                                        </motion.div>
                                     ))}
+                                </AnimatePresence>
                                 </List>
                             </Paper>
-                        </Grid>
-                    </Grid>
+                    </motion.div>
                 </Grid>
+            </Grid>
 
-                <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+            {/* Invite Member Dialog */}
+            <Dialog open={inviteDialogOpen} onClose={() => setInviteDialogOpen(false)}>
+                <DialogTitle>Invite Team Member</DialogTitle>
+                <DialogContent>
+                    {inviteError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {inviteError}
+                        </Alert>
+                    )}
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Email Address"
+                        type="email"
+                        fullWidth
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        disabled={inviting}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setInviteDialogOpen(false)} disabled={inviting}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleInviteMember} disabled={inviting}>
+                        {inviting ? <CircularProgress size={24} /> : 'Send Invitation'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Project Creation Dialog */}
+            <Dialog open={openProjectDialog} onClose={handleProjectDialogClose} maxWidth="sm" fullWidth>
                     <DialogTitle>Create a new Project</DialogTitle>
                     <DialogContent>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
+                    <Box sx={{ pt: 2 }}>
                                 <TextField
-                                    autoFocus
-                                    variant="outlined"
                                     fullWidth
-                                    id="projectName"
                                     label="Project Name"
-                                    name="projectName"
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
+                            name="name"
+                            value={projectFormData.name}
+                            onChange={handleProjectInputChange}
+                            required
+                            sx={{ mb: 2 }}
+                        />
+
                                 <TextField
-                                    variant="outlined"
                                     fullWidth
-                                    id="projectDescription"
                                     label="Project Description"
-                                    name="projectDescription"
+                            name="description"
+                            value={projectFormData.description}
+                            onChange={handleProjectInputChange}
                                     multiline
                                     rows={4}
+                            sx={{ mb: 2 }}
+                        />
+
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="body1" gutterBottom>
+                                Project Cover Image
+                            </Typography>
+                            <Paper 
+                                variant="outlined" 
+                                sx={{
+                                    p: 2, 
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                    }
+                                }}
+                                onClick={() => document.getElementById('project-image-input')?.click()}
+                            >
+                                <input
+                                    id="project-image-input"
+                                    type="file"
+                                    hidden
+                                    accept="image/*"
+                                    onChange={handleProjectFileChange}
                                 />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Box
+                                <Button
+                                    variant="contained"
+                                    color="primary"
                                     sx={{
-                                        border: '1px solid rgba(0, 0, 0, 0.23)',
-                                        borderRadius: 1,
-                                        padding: 2,
-                                        textAlign: 'center',
-                                        backgroundColor: '#f9f9f9',
+                                        textTransform: 'none',
+                                        borderRadius: 0
                                     }}
                                 >
+                                    Upload Image
+                                </Button>
+                            </Paper>
+                        </Box>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button 
+                        onClick={handleProjectDialogClose}
+                        sx={{ borderRadius: 0 }}
+                    >
+                        Cancel
+                    </Button>
                                     <Button
                                         variant="contained"
-                                        component="label"
-                                        startIcon={<CloudUploadIcon />}
-                                    >
-                                        Upload File
-                                        <input
-                                            type="file"
-                                            hidden
-                                        />
-                                    </Button>
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12}>
+                        onClick={handleCreateProject}
+                        disabled={projectLoading || !projectFormData.name}
+                        sx={{ borderRadius: 0 }}
+                    >
+                        Create Project
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Edit Project Dialog */}
+            <Dialog 
+                open={editDialogOpen} 
+                onClose={() => {
+                    setEditDialogOpen(false);
+                    setSelectedProject(null);
+                    setEditError(null);
+                }}
+            >
+                <DialogTitle>Edit Project</DialogTitle>
+                <DialogContent>
+                    <Box sx={{ pt: 2, width: 400 }}>
+                        {editError && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {editError}
+                            </Alert>
+                        )}
+                        <TextField
+                            fullWidth
+                            label="Project Name"
+                            value={selectedProject?.name || ''}
+                            onChange={(e) => setSelectedProject(prev => 
+                                prev ? { ...prev, name: e.target.value } : null
+                            )}
+                            sx={{ mb: 2 }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Description"
+                            multiline
+                            rows={4}
+                            value={selectedProject?.description || ''}
+                            onChange={(e) => setSelectedProject(prev => 
+                                prev ? { ...prev, description: e.target.value } : null
+                            )}
+                            sx={{ mb: 2 }}
+                        />
                                 <TextField
-                                    select
-                                    variant="outlined"
                                     fullWidth
-                                    label="Workers"
-                                    defaultValue={workers.length > 0 ? workers[0].name : ''}
-                                >
-                                    {workers.map((worker) => (
-                                        <MenuItem key={worker._id} value={worker.name}>
-                                            <FormControlLabel
-                                                control={<Checkbox defaultChecked />}
-                                                label={worker.name}
-                                            />
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-                            </Grid>
-                        </Grid>
+                            label="Logo URL"
+                            value={selectedProject?.image_url || ''}
+                            onChange={(e) => setSelectedProject(prev => 
+                                prev ? { ...prev, image_url: e.target.value } : null
+                            )}
+                        />
+                    </Box>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleClose} color="secondary">
+                    <Button 
+                        onClick={() => {
+                            setEditDialogOpen(false);
+                            setSelectedProject(null);
+                            setEditError(null);
+                        }}
+                        sx={{ borderRadius: 0 }}
+                    >
                             Cancel
                         </Button>
-                        <Button variant="contained" color="primary">
-                            Create
+                    <Button 
+                        variant="contained"
+                        onClick={handleEditProject}
+                        sx={{ borderRadius: 0 }}
+                    >
+                        Save Changes
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </Container>
         </Box>
     );
-}
+};
 
 export default Dashboard;

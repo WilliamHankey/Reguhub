@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Grid, Box, Avatar, Typography, TextField, Button, Link,
+  Grid, Box, Avatar, Typography, TextField, Button,
   InputAdornment, IconButton, Paper, CssBaseline, Alert, CircularProgress
 } from '@mui/material';
 import { LockOutlined as LockOutlinedIcon, Visibility, VisibilityOff, Email as EmailIcon } from '@mui/icons-material';
@@ -9,45 +9,100 @@ import { supabase } from '../utils/supabaseClient';
 import logo from "../assests/reguhublogo.svg";
 import Background from '../assests/reguhub_bg.jpg';
 
-function Login() {
+function Register() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('wchankey15@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldownTime, setCooldownTime] = useState(0);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldownTime > 0) {
+      timer = setInterval(() => {
+        setCooldownTime((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [cooldownTime]);
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (cooldownTime > 0) {
+      setError(`Please wait ${cooldownTime} seconds before trying again.`);
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Sign up the user without email confirmation
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (signUpError) {
+        if (signUpError.message?.includes('security purposes')) {
+          const waitSeconds = parseInt(signUpError.message.match(/\d+/)?.[0] || '60');
+          setCooldownTime(waitSeconds);
+          throw new Error(`Please wait ${waitSeconds} seconds before trying again.`);
+        }
+        throw signUpError;
+      }
+
+      if (!authData.user?.id) {
+        throw new Error('User registration failed. Please try again.');
+      }
+
+      // Create the profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          full_name: fullName,
+          email: email,
+          avatar_url: null,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error('Failed to create user profile. Please try again.');
+      }
+
+      // Sign in the user immediately
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        throw error;
+      if (signInError) {
+        throw new Error('Registration successful but login failed. Please try logging in manually.');
       }
 
-      if (data.user) {
-        // Store the session
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('session', JSON.stringify(data.session));
-        
-        // Redirect to dashboard
-        navigate('/dashboard');
-      }
+      // Navigate to organization creation page immediately
+      navigate('/organisation');
     } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Failed to connect to the authentication service. Please try again.');
+      console.error('Registration error:', error);
+      setError(error.message || 'Failed to register. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +123,6 @@ function Login() {
           backgroundPosition: 'center',
         }}
       />
-      {/* Right Column with Login Form */}
       <Grid item xs={12} sm={6} md={5} component={Paper} elevation={6} square>
         <Box
           sx={{
@@ -83,14 +137,33 @@ function Login() {
             <img src={logo} alt="Company Logo" style={{ width: '100%' }} />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Sign In
+            Register
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
               {error}
             </Alert>
           )}
-          <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: '100%' }}>
+          {cooldownTime > 0 && (
+            <Alert severity="info" sx={{ mt: 2, width: '100%' }}>
+              Please wait {cooldownTime} seconds before trying again
+            </Alert>
+          )}
+          <Box component="form" onSubmit={handleRegister} sx={{ mt: 1, width: '100%' }}>
+            <TextField
+              variant="outlined"
+              margin="normal"
+              required
+              fullWidth
+              id="fullName"
+              label="Full Name"
+              name="fullName"
+              autoComplete="name"
+              autoFocus
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              disabled={loading}
+            />
             <TextField
               variant="outlined"
               margin="normal"
@@ -100,7 +173,6 @@ function Login() {
               label="Email Address"
               name="email"
               autoComplete="email"
-              autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
@@ -121,7 +193,7 @@ function Login() {
               label="Password"
               type={showPassword ? 'text' : 'password'}
               id="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -145,26 +217,16 @@ function Login() {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+              disabled={loading || cooldownTime > 0}
             >
               {loading ? (
                 <CircularProgress size={24} color="inherit" />
+              ) : cooldownTime > 0 ? (
+                `Wait ${cooldownTime}s`
               ) : (
-                'Sign In'
+                'Register'
               )}
             </Button>
-            <Grid container>
-              <Grid item xs>
-                <Link href="#" variant="body2">
-                  Forgot password?
-                </Link>
-              </Grid>
-              <Grid item>
-                <Link href="/register" variant="body2">
-                  {"Don't have an account? Register"}
-                </Link>
-              </Grid>
-            </Grid>
           </Box>
         </Box>
       </Grid>
@@ -172,4 +234,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Register; 
