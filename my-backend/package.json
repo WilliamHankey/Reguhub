@@ -1,17 +1,35 @@
 {
-  "name": "my-backend",
+  "name": "reguhub-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend for ReguHub application",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.3",
+    "@types/express": "^5.0.1",
+    "@types/form-data": "^2.2.1",
+    "@types/formidable": "^3.4.5",
+    "@types/multer": "^1.4.12",
+    "@types/node-fetch": "2.6.12",
+    "aws-sdk": "^2.1531.0",
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "mongoose": "^8.5.1"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.0.1",
+    "form-data": "^4.0.2",
+    "formidable": "^3.5.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "2.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.13",
+    "nodemon": "^3.0.3"
   }
 }
