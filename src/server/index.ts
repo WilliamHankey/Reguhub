@@ -13,6 +13,7 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
+
 // Handle file uploads and other routes
 app.use('/api/files', filesRouter as Router);
 app.use('/api/projects', projectsRouter as Router);
