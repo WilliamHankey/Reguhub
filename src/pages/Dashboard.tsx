@@ -679,7 +679,7 @@ const Dashboard: React.FC = () => {
                         mb: 3,
                         display: 'flex',
                         flexDirection: 'column',
-                        height: 'calc(100vh - 34%)', 
+                        height: 'calc(100vh - 35%)', 
                     }}>
                         <Box sx={{ 
                             display: 'flex', 
