@@ -5,13 +5,14 @@
     "lib": ["es2017"],
     "moduleResolution": "node",
     "outDir": "../../dist",
-    "rootDir": ".",
+    "rootDir": "../..",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "typeRoots": ["../../node_modules/@types"]
+    "typeRoots": ["../../node_modules/@types"],
+    "allowJs": true
   },
-  "include": ["./**/*"],
+  "include": ["./**/*", "../../my-backend/**/*"],
   "exclude": ["node_modules"]
 } 

@@ -57,12 +57,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // Create a new project
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { name, description, manager_id } = req.body;
+    const { name, description, manager_id, logo } = req.body;
     
     const { data: project, error } = await supabase
       .from('projects')
       .insert([
-        { name, description, manager_id }
+        { name, description, manager_id, logo }
       ])
       .select()
       .single();

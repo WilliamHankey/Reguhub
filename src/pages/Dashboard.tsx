@@ -59,56 +59,56 @@ const dummyProjects: Project[] = [
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'Safety Management System',
         description: 'Comprehensive safety protocols and guidelines for construction sites.',
-        image_url: '/src/assets/projects/victorymetals.png',
+        image_url: '/images/projects/victorymetals.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174001',
         name: 'Risk Assessment Framework',
         description: 'Standardized approach to identifying and mitigating workplace hazards.',
-        image_url: '/src/assets/projects/newfound.png',
+        image_url: '/images/projects/newfound.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174002',
         name: 'Emergency Response Plan',
         description: 'Detailed procedures for handling workplace emergencies and incidents.',
-        image_url: '/src/assets/projects/victorymetals.png',
+        image_url: '/images/projects/victorymetals.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174003',
         name: 'Training Documentation',
         description: 'Employee safety training records and certification tracking system.',
-        image_url: '/src/assets/projects/reguhub_bg.jpg',
+        image_url: '/images/projects/reguhub_bg.jpg',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174004',
         name: 'Equipment Inspection',
         description: 'Regular safety inspections and maintenance records for equipment.',
-        image_url: '/src/assets/projects/limebit.png',
+        image_url: '/images/projects/limebit.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174005',
         name: 'Incident Reporting',
         description: 'System for reporting and investigating workplace incidents.',
-        image_url: '/src/assets/projects/newfound.png',
+        image_url: '/images/projects/newfound.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174006',
         name: 'PPE Management',
         description: 'Personal Protective Equipment inventory and distribution system.',
-        image_url: '/src/assets/projects/victorymetals.png',
+        image_url: '/images/projects/victorymetals.png',
         created_at: new Date().toISOString()
     },
     {
         id: '123e4567-e89b-12d3-a456-426614174007',
         name: 'Safety Metrics Dashboard',
         description: 'Real-time monitoring of key safety performance indicators.',
-        image_url: '/src/assets/projects/reguhub_bg.jpg',
+        image_url: '/images/projects/reguhub_bg.jpg',
         created_at: new Date().toISOString()
     }
 ];
@@ -164,9 +164,11 @@ const Dashboard: React.FC = () => {
         description: '',
         status: 'planning',
         imageFile: null as File | null,
+        imagePreview: '' as string
     });
     const [projectLoading, setProjectLoading] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
+    const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -338,6 +340,7 @@ const Dashboard: React.FC = () => {
             description: '',
             status: 'planning',
             imageFile: null,
+            imagePreview: ''
         });
         setProjectError(null);
     };
@@ -362,7 +365,15 @@ const Dashboard: React.FC = () => {
                 setProjectError('File must be an image');
                 return;
             }
-            setProjectFormData(prev => ({ ...prev, imageFile: file }));
+            
+            // Create preview URL
+            const previewUrl = URL.createObjectURL(file);
+            
+            setProjectFormData(prev => ({ 
+                ...prev, 
+                imageFile: file,
+                imagePreview: previewUrl
+            }));
             setProjectError(null);
         }
     };
@@ -370,31 +381,50 @@ const Dashboard: React.FC = () => {
     const handleCreateProject = async () => {
         setProjectLoading(true);
         setProjectError(null);
+        setUploadSuccess(null);
 
         try {
-            const user = await supabase.auth.getUser();
-            if (!user.data.user) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
                 throw new Error('No user found');
             }
 
+            // Get organization ID first
+            const { data: orgMember, error: orgError } = await supabase
+                .from('organization_members')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (orgError) throw new Error('Failed to get organization');
+            if (!orgMember) throw new Error('No organization found');
+
             let imageUrl = null;
             if (projectFormData.imageFile) {
-                const uploadFormData = new FormData();
-                uploadFormData.append('file', projectFormData.imageFile);
+                // Create a unique file name with timestamp and organization ID
+                const fileExt = projectFormData.imageFile.name.split('.').pop();
+                const fileName = `${orgMember.organization_id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-                const response = await fetch('http://localhost:3001/api/upload', {
-                    method: 'POST',
-                    body: uploadFormData,
-                });
+                // Upload to Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('organization-logos')
+                    .upload(fileName, projectFormData.imageFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
 
-                if (!response.ok) {
-                    throw new Error('Failed to upload image');
-                }
+                if (uploadError) throw uploadError;
 
-                const data = await response.json();
-                imageUrl = data.url;
+                // Get the public URL
+                const { data: { publicUrl } } = supabase.storage
+                    .from('organization-logos')
+                    .getPublicUrl(fileName);
+
+                imageUrl = publicUrl;
+                setUploadSuccess(`Image "${projectFormData.imageFile.name}" uploaded successfully!`);
             }
 
+            // Create the project with the image URL
             const { data: project, error: projectError } = await supabase
                 .from('projects')
                 .insert([
@@ -403,8 +433,9 @@ const Dashboard: React.FC = () => {
                         description: projectFormData.description,
                         status: projectFormData.status,
                         image_url: imageUrl,
-                        created_by: user.data.user.id,
-                    },
+                        organization_id: orgMember.organization_id,
+                        created_by: user.id
+                    }
                 ])
                 .select()
                 .single();
@@ -412,23 +443,24 @@ const Dashboard: React.FC = () => {
             if (projectError) throw projectError;
 
             // Log activity
-            const { error: activityError } = await supabase
+            await supabase
                 .from('activities')
                 .insert([
                     {
                         project_id: project.id,
-                        user_id: user.data.user.id,
-                        action: 'created',
-                        details: `Created project: ${projectFormData.name}`,
-                    },
+                        user_id: user.id,
+                        organization_id: orgMember.organization_id,
+                        description: `Created project: ${projectFormData.name}`,
+                        action: 'created'
+                    }
                 ]);
 
-            if (activityError) throw activityError;
-
-            // Update projects list
+            // Update projects list and close dialog
             setProjects(prev => [...prev, project]);
             handleProjectDialogClose();
+            
         } catch (err: any) {
+            console.error('Project creation error:', err);
             setProjectError(err.message);
         } finally {
             setProjectLoading(false);
@@ -821,7 +853,7 @@ const Dashboard: React.FC = () => {
                                     />
                                     </Paper>
                             </motion.div>
-                            </Grid>
+                        </Grid>
                         </Grid>
                     </Grid>
 
@@ -913,6 +945,16 @@ const Dashboard: React.FC = () => {
                     <DialogTitle>Create a new Project</DialogTitle>
                     <DialogContent>
                     <Box sx={{ pt: 2 }}>
+                        {projectError && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {projectError}
+                            </Alert>
+                        )}
+                        {uploadSuccess && (
+                            <Alert severity="success" sx={{ mb: 2 }}>
+                                {uploadSuccess}
+                            </Alert>
+                        )}
                                 <TextField
                                     fullWidth
                                     label="Project Name"
@@ -940,9 +982,9 @@ const Dashboard: React.FC = () => {
                             </Typography>
                             <Paper 
                                 variant="outlined" 
-                                sx={{
+                                    sx={{
                                     p: 2, 
-                                    textAlign: 'center',
+                                        textAlign: 'center',
                                     cursor: 'pointer',
                                     '&:hover': {
                                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
@@ -950,23 +992,52 @@ const Dashboard: React.FC = () => {
                                 }}
                                 onClick={() => document.getElementById('project-image-input')?.click()}
                             >
-                                <input
+                                        <input
                                     id="project-image-input"
-                                    type="file"
-                                    hidden
+                                            type="file"
+                                            hidden
                                     accept="image/*"
                                     onChange={handleProjectFileChange}
                                 />
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: 0
-                                    }}
-                                >
-                                    Upload Image
-                                </Button>
+                                {projectFormData.imagePreview ? (
+                                    <Box sx={{ position: 'relative' }}>
+                                        <Box
+                                            component="img"
+                                            src={projectFormData.imagePreview}
+                                            alt="Preview"
+                                            sx={{
+                                                width: '100%',
+                                                maxHeight: '200px',
+                                                objectFit: 'contain',
+                                                mb: 2
+                                            }}
+                                        />
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: 0
+                                            }}
+                                        >
+                                            Change Image
+                                        </Button>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                                        <ImageIcon sx={{ fontSize: 40, color: 'text.secondary' }} />
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: 0
+                                            }}
+                                        >
+                                            Upload Image
+                                    </Button>
+                                </Box>
+                                )}
                             </Paper>
                         </Box>
                     </Box>
@@ -978,13 +1049,20 @@ const Dashboard: React.FC = () => {
                     >
                         Cancel
                     </Button>
-                                    <Button
-                                        variant="contained"
+                    <Button
+                        variant="contained"
                         onClick={handleCreateProject}
                         disabled={projectLoading || !projectFormData.name}
                         sx={{ borderRadius: 0 }}
                     >
-                        Create Project
+                        {projectLoading ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CircularProgress size={20} color="inherit" />
+                                Creating...
+                            </Box>
+                        ) : (
+                            'Create Project'
+                        )}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const supabase = require('../utils/supabaseClient');
-const { s3, BUCKET_NAME, PUBLIC_URL } = require('../config/r2');
 const authMiddleware = require('../middleware/auth');
 
 // Configure multer for memory storage
@@ -16,24 +15,30 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
     }
 
     const { project_id } = req.body;
-    const fileKey = `${req.user.id}/${Date.now()}-${req.file.originalname}`;
-    
-    // Upload to Cloudflare R2
-    await s3.putObject({
-      Bucket: BUCKET_NAME,
-      Key: fileKey,
-      Body: req.file.buffer,
-      ContentType: req.file.mimetype,
-    }).promise();
+    const fileExt = req.file.originalname.split('.').pop();
+    const fileName = `${Date.now()}-${req.file.originalname}`;
 
-    const fileUrl = `${PUBLIC_URL}/${fileKey}`;
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('organization-logos')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    // Get the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('organization-logos')
+      .getPublicUrl(fileName);
 
     // Save file metadata to Supabase
     const { data: file, error } = await supabase
       .from('files')
       .insert([{
         filename: req.file.originalname,
-        url: fileUrl,
+        url: publicUrl,
         content_type: req.file.mimetype,
         size: req.file.size,
         project_id: project_id,
@@ -81,16 +86,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Extract key from URL
-    const fileKey = file.url.replace(`${PUBLIC_URL}/`, '');
+    // Extract filename from URL
+    const fileName = file.url.split('/').pop();
 
-    // Delete from R2
-    await s3.deleteObject({
-      Bucket: BUCKET_NAME,
-      Key: fileKey
-    }).promise();
+    // Delete from Supabase Storage
+    const { error: deleteStorageError } = await supabase.storage
+      .from('organization-logos')
+      .remove([fileName]);
 
-    // Delete from Supabase
+    if (deleteStorageError) throw deleteStorageError;
+
+    // Delete metadata from Supabase
     const { error: deleteError } = await supabase
       .from('files')
       .delete()
