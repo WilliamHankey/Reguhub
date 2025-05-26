@@ -303,8 +303,19 @@ const Profile: React.FC = () => {
                   variant="outlined" 
                   startIcon={<EditIcon />}
                   onClick={handleEditClick}
+                  sx={{ mr: 2 }}
                 >
                   Edit Profile
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate('/login');
+                  }}
+                >
+                  Log Out
                 </Button>
               </Box>
             </Grid>

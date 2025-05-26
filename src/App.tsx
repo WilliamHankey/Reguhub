@@ -1,6 +1,6 @@
 // src/App.tsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './config/theme';
 import Login from './pages/Login';
@@ -14,63 +14,51 @@ import Workers from './pages/Workers';
 import ProjectDetails from './pages/ProjectDetails';
 import SafetyIndex from './pages/SafetyIndex';
 import Profile from './pages/Profile';
+import Landing from './pages/Landing';
+import DemoLogin from './pages/DemoLogin';
+
+const AppRoutes: React.FC = () => {
+  const location = useLocation();
+  let headerProps = {};
+  if (location.pathname === '/login' || location.pathname === '/register') {
+    headerProps = { hide: true };
+  } else if (location.pathname === '/organisation' || location.pathname === '/workers') {
+    headerProps = { logoOnly: true };
+  }
+  return (
+    <div className="app">
+      <Header {...headerProps} />
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/demo-login" element={<DemoLogin />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/projects" element={<ProtectedRoute><ProjectIndex /></ProtectedRoute>} />
+        <Route path="/organisation" element={<ProtectedRoute><Organisation /></ProtectedRoute>} />
+        <Route path="/workers" element={<ProtectedRoute><Workers /></ProtectedRoute>} />
+        <Route path="/safetyindex/:id" element={<ProtectedRoute><SafetyIndex /></ProtectedRoute>} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <Router>
-    <div className="app">
-          <Header />
-
-      <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route 
-              path="/projects" 
-              element={
-                <ProtectedRoute>
-                  <ProjectIndex />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/organisation" 
-              element={
-                <ProtectedRoute>
-                  <Organisation />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/workers" 
-              element={
-                <ProtectedRoute>
-                  <Workers />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/safetyindex/:id" 
-              element={
-                <ProtectedRoute>
-                  <SafetyIndex />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/profile" element={<Profile />} />
-      </Routes>
-    </div>
-      </Router>
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <AppRoutes />
+      </ThemeProvider>
+    </Router>
   );
 };
 

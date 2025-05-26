@@ -1,24 +1,51 @@
+# Project Over view
 
-# Reguhub - Document Management System (DMS)
+## Summary
+Reguhub is a document management system (DMS) designed for health and safety consultants to standardize and streamline safety file management. It provides automation, standardized templates, and a user-friendly interface to improve compliance and efficiency.
 
-Reguhub is a document management system designed for health and safety consultants to standardize and streamline safety file management. It offers automation, standardized templates, and a user-friendly interface to improve compliance and efficiency.
+## Key Features
+- Centralized file management for safety documents
+- Standardized templates for consistency
+- Automation: reminders, batch uploads
+- User-friendly dashboard with role-based access
+- Scalable backend for multiple users/projects
 
+## Tech Stack
+- **Frontend:** React, Redux, Material-UI
+- **Backend:** Node.js, Express
+- **Database:** Supabase
+- **Hosting:** Render, Vercel
 
-## Features
+## Architecture Overview
+- **src/**: Main source code (components, pages, utils, assets)
+- **public/**: Static files (images, projects)
+- **my-backend/**: Backend code (routes, config, utils)
 
-- Centralized file management for quick access to safety documents.
-- Standardized templates to ensure consistency across projects.
-- Automation features such as reminders and batch uploads.
-- User-friendly dashboard with role-based access controls.
-- Scalable backend to support multiple users and projects.
+## User Flow
+- Login/Register
+- Dashboard
+- Project Index & Details
+- Safety Index
+- Organization & Workers
+- Profile
 
+## Product Requirements (Highlights)
+- Multi-factor authentication, role-based access, session management
+- Project/task management, file upload/versioning, collaboration
+- Compliance tracking, audit trails, automated reporting
+- Responsive SPA, real-time updates, offline support
+- Security: encryption, GDPR, XSS/CSRF protection
+- Performance: <2s load, <200ms API, 99.9% uptime
+- Integrations: email, calendar, analytics, API gateway
 
-## Installation
+## Future Considerations
+- AI-powered compliance suggestions
+- Advanced analytics and reporting
+- Native mobile app
+- Third-party integration marketplace
 
-If applicable, add:
-
-Steps to install and set up Reguhub.
-Any dependencies or system requirements.
+---
+For more details, see the PRD and architecture diagrams in the repository.
 
 ```bash
 # Clone the repository

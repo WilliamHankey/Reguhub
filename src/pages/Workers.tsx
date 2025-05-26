@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -7,8 +7,11 @@ import {
   Alert,
   Paper,
   Container,
-  CircularProgress
+  CircularProgress,
+  Divider,
+  Grid
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
 
 function Workers() {
@@ -16,6 +19,17 @@ function Workers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const orgId = localStorage.getItem('organization_id');
+    if (!orgId) {
+      setError('No organization found. Please create an organization first.');
+      return;
+    }
+    setOrganizationId(orgId);
+  }, []);
 
   const handleInviteWorker = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,56 +38,21 @@ function Workers() {
     setLoading(true);
 
     try {
-      // 1. Generate a temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
-
-      // 2. Create the user in Supabase
-      const { data: authData, error: createError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: tempPassword,
-        email_confirm: true
-      });
-
-      if (createError) throw createError;
-
-      if (!authData.user) {
-        throw new Error('Failed to create user');
-      }
-
-      // 3. Create the profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email: email,
-          full_name: '', // Will be updated when they first login
-          avatar_url: null,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (profileError) throw profileError;
-
-      // 4. Create magic link for the user
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: email
-      });
-
-      if (linkError) throw linkError;
-
-      // 5. Add to worker_invitations table
+      if (!organizationId) throw new Error('No organization found for this user.');
+      // Directly insert into Supabase
       const { error: inviteError } = await supabase
         .from('worker_invitations')
-        .insert({
-          email: email,
-          status: 'pending',
-          organization_id: 'current_org_id', // Replace with actual org ID
-        });
-
+        .insert([
+          {
+            email,
+            organization_id: organizationId,
+            status: 'pending'
+          }
+        ]);
       if (inviteError) throw inviteError;
-
       setSuccess('Worker invited successfully! They will receive an email with login instructions.');
       setEmail('');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Invitation error:', error);
       setError(error.message || 'Failed to invite worker');
@@ -83,15 +62,24 @@ function Workers() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ p: 4, mt: 4 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          Invite Worker
+    <Box sx={{ minHeight: '100vh', bgcolor: '#fff' }}>
+    <Container maxWidth="sm" sx={{ pt: 8 }}>
+        <Typography variant="h4">
+          Want to add your team?
         </Typography>
+        <Typography variant="subtitle1" color="textSecondary" gutterBottom>
+          Invite them to your team to start, manage and complete projects together
+        </Typography>
+
         
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
+            {error.includes('No organization found') && (
+              <Button variant="text" sx={{ ml: 2 }} onClick={() => navigate('/organisation')}>
+                Create Organization
+              </Button>
+            )}
           </Alert>
         )}
         
@@ -101,29 +89,67 @@ function Workers() {
           </Alert>
         )}
 
+        <Divider sx={{ my: 2, mb:6 }} />
+
         <Box component="form" onSubmit={handleInviteWorker}>
           <TextField
             fullWidth
-            label="Worker Email"
+            label="john@example.com"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            disabled={loading}
+            disabled={loading || !!error}
+            sx={{ mb: 2 }}
+          />
+             <TextField
+            fullWidth
+            label="susan@example.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={loading || !!error}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            label="tom@example.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={loading || !!error}
             sx={{ mb: 2 }}
           />
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Invite Worker'}
-          </Button>
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => navigate('/dashboard')}
+              >
+                Skip
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={loading}
+                color='primary'
+              >
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Invite Worker'
+                )}
+              </Button>
+            </Box>
+          </Grid>
         </Box>
-      </Paper>
-    </Container>
+      </Container>
+    </Box>
+
   );
 }
 

@@ -6,8 +6,8 @@ import {
 import { LockOutlined as LockOutlinedIcon, Visibility, VisibilityOff, Email as EmailIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
-import logo from "../assests/reguhublogo.svg";
-import Background from '../assests/reguhub_bg.jpg';
+import ReguhubLogoV from '../assets/ReguhubLogoV.svg';
+import reguhubBg from '../assets/reguhub_bg.png';
 
 function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -98,7 +98,7 @@ function Register() {
         throw new Error('Registration successful but login failed. Please try logging in manually.');
       }
 
-      // Navigate to organization creation page immediately
+      // Navigate to organization creation after registration
       navigate('/organisation');
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -117,7 +117,7 @@ function Register() {
         sm={6}
         md={7}
         sx={{
-          backgroundImage: `url(${Background})`,
+          backgroundImage: `url(${reguhubBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -126,17 +126,17 @@ function Register() {
       <Grid item xs={12} sm={6} md={5} component={Paper} elevation={6} square>
         <Box
           sx={{
-            my: 8,
+            my: 12,
             mx: 4,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'transparent' }}>
-            <img src={logo} alt="Company Logo" style={{ width: '100%' }} />
-          </Avatar>
-          <Typography component="h1" variant="h5">
+       
+       <img src={ReguhubLogoV} alt="Company Logo" style={{ width: '100%', height: 'auto', maxWidth: 120, display: 'block', margin: '0 auto' }} />
+   
+          <Typography component="h1" variant="h5" marginTop={8}>
             Register
           </Typography>
           {error && (

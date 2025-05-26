@@ -5,92 +5,153 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import SearchIcon from '@mui/icons-material/Search';
+import MailIcon from '@mui/icons-material/Mail';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import InputBase from '@mui/material/InputBase';
-import { Avatar, Box, Grid, Container } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import logo from "../assests/reguhublogo.svg";
+import { Avatar, Badge, Box, FormControlLabel, Menu, MenuItem, Paper, styled, Switch, useColorScheme } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import ReguhubLogoLong from '../assets/ReguhubLogoLong.svg';
 import { supabase } from '../utils/supabaseClient';
 
-const Header: React.FC = () => {
+export interface HeaderProps {
+  hide?: boolean;
+  logoOnly?: boolean;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+}
+
+const MaterialUISwitch = styled(Switch)(({ theme }) => ({
+  width: 62,
+  height: 34,
+  padding: 7,
+  '& .MuiSwitch-switchBase': {
+    margin: 1,
+    padding: 0,
+    transform: 'translateX(6px)',
+    '&.Mui-checked': {
+      color: '#fff',
+      transform: 'translateX(22px)',
+      '& .MuiSwitch-thumb:before': {
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent(
+          '#fff',
+        )}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
+      },
+      '& + .MuiSwitch-track': {
+        opacity: 1,
+        backgroundColor: '#aab4be',
+        ...theme.applyStyles('dark', {
+          backgroundColor: '#8796A5',
+        }),
+      },
+    },
+  },
+  '& .MuiSwitch-thumb': {
+    backgroundColor: '#001e3c',
+    width: 32,
+    height: 32,
+    '&::before': {
+      content: "''",
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      left: 0,
+      top: 0,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center',
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent(
+        '#fff',
+      )}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
+    },
+    ...theme.applyStyles('dark', {
+      backgroundColor: '#003892',
+    }),
+  },
+  '& .MuiSwitch-track': {
+    opacity: 1,
+    backgroundColor: '#aab4be',
+    borderRadius: 20 / 2,
+    ...theme.applyStyles('dark', {
+      backgroundColor: '#8796A5',
+    }),
+  },
+}));
+
+
+const Header: React.FC<HeaderProps> = ({ hide = false, logoOnly = false, searchValue, onSearchChange }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [user, setUser] = useState<any>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        setUser({
-          ...user,
-          ...profile
-        });
-      }
-    };
-
-    fetchUser();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => { listener?.subscription.unsubscribe(); };
   }, []);
 
-  const handleNavigateToDashboard = () => {
-    navigate('/dashboard');
-  };
-
-  const handleNavigateToProfile = () => {
-    navigate('/profile');
-  };
-
-  // Conditionally render the header only on the dashboard and project index pages
-  if (location.pathname !== '/dashboard' && 
-      !location.pathname.startsWith('/safetyindex') && 
-      location.pathname !== '/profile') {
-    return null;
-  }
-
+  if (hide) return null;
   return (
-    <AppBar position="static" color="default" sx={{ backgroundColor: '#ffffff', boxShadow: 'none', borderBottom: '1px solid #e0e0e0', marginBottom: 0 }}>
-      <Toolbar>
-        <Avatar 
-          alt="Logo" 
-          src={logo}
-          sx={{ cursor: 'pointer' }} 
-          onClick={handleNavigateToDashboard}
-        />
-        <Typography variant="h6" sx={{ flexGrow: 1, marginLeft: 2, color: '#333333' }}>
-          ReguHub HSE
-        </Typography>
-        <Box sx={{ position: 'relative', marginRight: 2 }}>
-          <InputBase
-            placeholder="Search…"
-            startAdornment={<SearchIcon sx={{ color: '#333333' }} />}
-            sx={{ border: '1px solid #ccc', borderRadius: '4px', padding: '0 8px' }}
-          />
+    <AppBar position="sticky" color="default" sx={{ backgroundColor: '#fff', boxShadow: 'none', borderBottom: '1px solid #e0e0e0', py: 1, borderRadius: '0px', mb: 0 }}>
+      <Toolbar sx={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Left: Logo */}
+        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+          <img src={ReguhubLogoLong} alt="Logo" style={{ height: 40 }} />
         </Box>
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            cursor: 'pointer',
-            '&:hover': {
-              opacity: 0.8
-            }
-          }}
-          onClick={handleNavigateToProfile}
-        >
-          <Avatar alt={user?.full_name || 'User'} src={user?.avatar_url} />
-          <Box sx={{ marginLeft: 1, textAlign: 'right' }}>
-            <Typography variant="subtitle1" sx={{ color: '#333333' }}>
-              {user?.full_name || 'Loading...'}
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#999999' }}>
-              {user?.email || 'Loading...'}
-            </Typography>
+        {/* Center: Search Bar */}
+        {!logoOnly && user && (
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <Box
+              component="form"
+              sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: 400 }}
+            >
+              <InputBase
+                sx={{ ml: 1, flex: 1, bgcolor: '#f4f4f4', borderRadius: 2, px: 2 }}
+                endAdornment={
+                  <IconButton
+                    type="button"
+                    sx={{ p: '10px' }}
+                    aria-label="search"
+                  >
+                    <SearchIcon />
+                  </IconButton>
+                }
+                placeholder="Search ..."
+                inputProps={{ 'aria-label': 'search google maps' }}
+                value={typeof searchValue === 'string' ? searchValue : ''}
+                onChange={e => onSearchChange && onSearchChange(e.target.value)}
+              />
+            </Box>
           </Box>
-        </Box>
+        )}
+        {/* Right: Switch, Avatar, Menu */}
+        {!logoOnly && user && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <FormControlLabel
+              control={<MaterialUISwitch sx={{ m: 1 }} defaultChecked />}
+              label="MUI switch"
+            />
+            <IconButton size="large" aria-label="show 4 new mails" color="inherit">
+              <Badge badgeContent={4} color="info">
+                <MailIcon />
+              </Badge>
+            </IconButton>
+            <IconButton>
+              <Badge badgeContent={17} color="warning">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <IconButton onClick={e => setAnchorEl(e.currentTarget)}>
+              <Avatar src={user?.user_metadata?.avatar_url || undefined} />
+            </IconButton>
+            <Menu anchorEl={anchorEl} open={open} onClose={() => setAnchorEl(null)}>
+              <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>Profile</MenuItem>
+              <MenuItem onClick={async () => { setAnchorEl(null); await supabase.auth.signOut(); navigate('/login'); }}>Logout</MenuItem>
+            </Menu>
+          </Box>
+        )}
       </Toolbar>
     </AppBar>
   );

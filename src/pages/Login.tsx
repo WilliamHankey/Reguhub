@@ -6,13 +6,13 @@ import {
 import { LockOutlined as LockOutlinedIcon, Visibility, VisibilityOff, Email as EmailIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../utils/supabaseClient';
-import logo from "../assests/reguhublogo.svg";
-import Background from '../assests/reguhub_bg.jpg';
+import ReguhubLogoV from '../assets/ReguhubLogoV.svg';
+import reguhubBg from '../assets/reguhub_bg.png';
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('wchankey15@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,27 +62,39 @@ function Login() {
         sm={6}
         md={7}
         sx={{
-          backgroundImage: `url(${Background})`,
+          backgroundImage: `url(${reguhubBg})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       />
       {/* Right Column with Login Form */}
-      <Grid item xs={12} sm={6} md={5} component={Paper} elevation={6} square>
+      <Grid item xs={12} sm={6} md={5} component={Paper} elevation={6} square
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#fafbfc',
+        }}
+      >
         <Box
           sx={{
-            my: 8,
+            mt: 6,
             mx: 4,
+            py: 6,
+            px: 4,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            width: '100%',
+       
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'transparent' }}>
-            <img src={logo} alt="Company Logo" style={{ width: '100%' }} />
-          </Avatar>
-          <Typography component="h1" variant="h5">
+
+          <img src={ReguhubLogoV} alt="Company Logo" style={{ width: '100%', height: 'auto', maxWidth: 120, display: 'block', margin: '0 auto' }} />
+   
+          <Typography component="h1" variant="h5" marginTop={8}>
             Sign In
           </Typography>
           {error && (
@@ -111,6 +123,7 @@ function Login() {
                   </InputAdornment>
                 ),
               }}
+              sx={{ mb: 2 }}
             />
             <TextField
               variant="outlined"
@@ -139,6 +152,7 @@ function Login() {
                   </InputAdornment>
                 ),
               }}
+              sx={{ mb: 3 }}
             />
             <Button
               type="submit"
@@ -153,7 +167,7 @@ function Login() {
                 'Sign In'
               )}
             </Button>
-            <Grid container>
+            <Grid container sx={{ mb: 1 }}>
               <Grid item xs>
                 <Link href="#" variant="body2">
                   Forgot password?

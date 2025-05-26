@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { motion } from 'framer-motion';
+import logo from '../assets/reguhublogo.svg';
 
 const FullPageLoader: React.FC = () => {
     return (
@@ -19,7 +20,7 @@ const FullPageLoader: React.FC = () => {
             }}
         >
             <motion.img
-                src="/static/media/reguhublogo.94aa4c72289361497deec5d62930db25.svg"
+                src={logo}
                 alt="Loading..."
                 animate={{
                     rotate: 360

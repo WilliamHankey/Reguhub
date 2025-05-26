@@ -57,7 +57,7 @@ import {
 import { DragDropContext, Droppable, Draggable, DroppableProvided, DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd';
 import { DocumentItem, DocumentType, UserRole } from '../types/document';
 import { supabase } from '../utils/supabaseClient';
-import Header from 'src/components/Header';
+import Header from '../components/Header';
 
 // Add interface for document creation
 interface CreateDocumentData extends Partial<DocumentItem> {
@@ -750,7 +750,7 @@ const SafetyIndex: React.FC = () => {
                     }}
                     ModalProps={{
                         keepMounted: true, // Better accessibility
-                        disableEnforceFocus: true, // Prevents the focus trap issue
+                        disableEnforceFocus: true, // Prevents the focus trap issue,
                     }}
                 >
                     <Box sx={{ p: 0 }}>
